@@ -484,17 +484,17 @@
             return;
           }
           try {
-        // Use Supabase auth token to delete the memory via the Edge Function
-        let accessToken = null;
-        if (window.supabase) {
-          const { data: sessionData } = await window.supabase.auth.getSession();
-          accessToken = sessionData?.session?.access_token || null;
-        }
-        const deleteUrl = `/functions/v1/memories?id=${encodeURIComponent(mem.id)}`;
-        const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+        /*
+         * Exclui a memória via rota padrão `/memories`. Anteriormente a
+         * exclusão era feita através de uma função Edge com cabeçalho
+         * Authorization; no ambiente atual utilizamos autenticação por
+         * cookie, portanto basta enviar a requisição com credentials
+         * inclusos.
+         */
+        const deleteUrl = `/memories?id=${encodeURIComponent(mem.id)}`;
         const res = await fetch(deleteUrl, {
           method: 'DELETE',
-          headers,
+          credentials: 'include',
         });
             if (res.status === 401) {
               alert('Sessão expirada. Faça login novamente para excluir memórias.');
@@ -541,20 +541,25 @@
       if (fromVal) params.set('from', fromVal);
       if (toVal) params.set('to', toVal);
       try {
-        // Acquire the current access token from Supabase.  If not logged
-        // in, the token will be null and the request will return only
-        // public memories via RLS.
-        let accessToken = null;
-        if (window.supabase) {
-          const { data: sessionData } = await window.supabase.auth.getSession();
-          accessToken = sessionData?.session?.access_token || null;
-        }
+        /*
+         * Realiza a solicitação de memórias usando a mesma API empregada
+         * no restante do aplicativo (rota `/memories`). Anteriormente
+         * este módulo utilizava uma função Edge (`/functions/v1/memories`) e
+         * passava um token JWT via cabeçalho Authorization, o que gerava
+         * um retorno 401 e fazia a interface voltar para a tela de login
+         * mesmo após autenticação. Ao alinhar a rota e a estratégia de
+         * autenticação com o roteiro principal (baseada em cookie de
+         * sessão), os formulários de publicação permanecem visíveis após
+         * login.
+         */
         const queryString = params.toString();
-        const fetchUrl = queryString ? `/functions/v1/memories?${queryString}` : '/functions/v1/memories';
-        const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
-        const res = await fetch(fetchUrl, { headers });
+        const fetchUrl = queryString ? `/memories?${queryString}` : '/memories';
+        const res = await fetch(fetchUrl, {
+          credentials: 'include',
+        });
+        // Se a sessão não estiver válida, o backend retorna 401 e
+        // permanecemos na interface de login.
         if (res.status === 401) {
-          // If the token expired or the user is not logged in
           showLogin();
           return;
         }
@@ -583,22 +588,19 @@
       progress.style.display = 'block';
       progress.value = 0;
       const xhr = new XMLHttpRequest();
-      // Upload the memory via the Supabase Edge Function.  We include
-      // the current access token in the Authorization header so the
-      // function knows which user is submitting the memory.
-      let accessToken = null;
-      if (window.supabase) {
-        // getSession() retorna uma Promise; sem o await o token nunca era
-        // resolvido e os uploads ficavam sem Authorization, resultando em 401
-        // mesmo após o login.
-        const { data: sessionData } = await window.supabase.auth.getSession().catch(() => ({}));
-        accessToken = sessionData?.session?.access_token || null;
-      }
-      xhr.open('POST', '/functions/v1/memories');
-      if (accessToken) {
-        xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
-      }
-      // xhr.withCredentials is not needed when using token-based auth
+      /*
+       * Envia a memória usando a rota padrão `/memories`. Utilizamos
+       * cookies de sessão (via `withCredentials`) em vez de tokens
+       * explícitos; isto evita que um token ausente cause 401 e
+       * o painel volte para a tela de login. Como o backend já
+       * protege a criação de memórias por sessão, não é necessário
+       * encaminhar cabeçalhos Authorization aqui.
+       */
+      xhr.open('POST', '/memories');
+      xhr.withCredentials = true;
+      // Como utilizamos autenticação baseada em cookie, o withCredentials
+      // garante que o cookie de sessão seja enviado; com token-based
+      // auth isto não seria necessário.
       xhr.upload.onprogress = function (e) {
         if (e.lengthComputable) {
           const percent = Math.round((e.loaded / e.total) * 100);
