@@ -577,7 +577,7 @@
      *
      * @param {FormData} formData Dados do formulário de publicação
      */
-    function uploadMemory(formData) {
+    async function uploadMemory(formData) {
       publishError.textContent = '';
       publishSuccess.textContent = '';
       progress.style.display = 'block';
@@ -588,7 +588,10 @@
       // function knows which user is submitting the memory.
       let accessToken = null;
       if (window.supabase) {
-        const { data: sessionData } = window.supabase.auth.getSession().catch(() => ({}));
+        // getSession() retorna uma Promise; sem o await o token nunca era
+        // resolvido e os uploads ficavam sem Authorization, resultando em 401
+        // mesmo após o login.
+        const { data: sessionData } = await window.supabase.auth.getSession().catch(() => ({}));
         accessToken = sessionData?.session?.access_token || null;
       }
       xhr.open('POST', '/functions/v1/memories');
