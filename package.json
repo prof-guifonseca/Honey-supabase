@@ -1,0 +1,27 @@
+{
+  "name": "luademel-memos",
+  "version": "1.0.0",
+  "description": "Servidor e PWA para memórias compartilhadas.",
+  "main": "index.html",
+  "scripts": {
+    "start": "supabase start",
+    "dev": "supabase functions serve",
+    "db:push": "supabase db push",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "uuid": "^9.0.1",
+    "@capacitor/core": "^5.0.5",
+    "@supabase/supabase-js": "^2.38.5"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^5.0.5"
+  }
+}
