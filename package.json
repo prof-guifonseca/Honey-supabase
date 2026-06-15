@@ -17,7 +17,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "uuid": "^9.0.1",
+    "uuid": "^14.0.0",
     "@capacitor/core": "^5.0.5",
     "@supabase/supabase-js": "^2.38.5"
   },
